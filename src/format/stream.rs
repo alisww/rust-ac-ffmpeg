@@ -15,6 +15,7 @@ extern "C" {
     fn ffw_stream_get_start_time(stream: *const c_void) -> i64;
     fn ffw_stream_get_duration(stream: *const c_void) -> i64;
     fn ffw_stream_get_nb_frames(stream: *const c_void) -> i64;
+    fn ffw_stream_get_avg_frame_rate(stream: *const c_void) -> f64;
     fn ffw_stream_get_codec_parameters(stream: *const c_void) -> *mut c_void;
     fn ffw_stream_set_metadata(
         stream: *mut c_void,
@@ -74,6 +75,16 @@ impl Stream {
             None
         } else {
             Some(count as _)
+        }
+    }
+
+    pub fn average_frame_rate(&self) -> Option<f64> {
+        let fps = unsafe { ffw_stream_get_avg_frame_rate(self.ptr) };
+
+        if fps <= 0.0 {
+            None
+        } else {
+            Some(fps as _)
         }
     }
 
