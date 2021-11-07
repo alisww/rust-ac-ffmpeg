@@ -25,8 +25,8 @@ int64_t ffw_stream_get_nb_frames(const AVStream* stream) {
     return stream->nb_frames;
 }
 
-double ffw_stream_get_avg_framerate(const AVStream* stream) {
-    return av_q2d(stream->avg_frame_rate);
+double ffw_stream_get_r_frame_rate(const AVStream* stream) {
+    return av_q2d(stream->r_frame_rate);
 }
 
 AVCodecParameters* ffw_stream_get_codec_parameters(const AVStream* stream) {
