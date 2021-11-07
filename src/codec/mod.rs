@@ -809,6 +809,19 @@ impl SubtitleCodecParameters {
     pub fn encoder_name(&self) -> Option<&'static str> {
         self.inner.encoder_name()
     }
+
+    pub fn extradata(&self) -> Option<&[u8]> {
+        unsafe {
+            let data = ffw_codec_parameters_get_extradata(self.inner.ptr) as *const u8;
+            let size = ffw_codec_parameters_get_extradata_size(self.inner.ptr) as usize;
+
+            if data.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts(data, size))
+            }
+        }
+    }
 }
 
 impl AsRef<InnerCodecParameters> for SubtitleCodecParameters {
