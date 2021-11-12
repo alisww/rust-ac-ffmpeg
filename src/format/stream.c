@@ -50,3 +50,11 @@ err:
 int ffw_stream_set_metadata(AVStream* stream, const char* key, const char* value) {
     return av_dict_set(&stream->metadata, key, value, 0);
 }
+
+AVDictionaryEntry* ffw_stream_get_metadata_entry(AVStream* stream, const char* key) {
+    return av_dict_get(stream->metadata, key, NULL, 0);
+}
+
+const char* ffw_stream_get_metadata_entry_value(AVDictionaryEntry* entry) {
+    return entry->value;
+}

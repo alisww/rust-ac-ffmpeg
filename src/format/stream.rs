@@ -1,7 +1,7 @@
 //! A/V stream information.
 
 use std::{
-    ffi::CString,
+    ffi::{CStr, CString},
     os::raw::{c_char, c_int, c_void},
 };
 
@@ -22,6 +22,8 @@ extern "C" {
         key: *const c_char,
         value: *const c_char,
     ) -> c_int;
+    fn ffw_stream_get_metadata_entry(stream: *const c_void, key: *const c_char) -> *const c_void;
+    fn ffw_stream_get_metadata_entry_value(entry: *const c_void) -> *const c_char;
 }
 
 /// Stream.
@@ -113,6 +115,25 @@ impl Stream {
 
         if ret < 0 {
             panic!("unable to allocate metadata");
+        }
+    }
+
+    pub fn get_metadata(&self, key: &str) -> Option<&'static str> {
+        unsafe {
+            let key = CString::new(key).expect("invalid metadata key");
+            let ptr = ffw_stream_get_metadata_entry(self.ptr, key.as_ptr());
+
+            if ptr.is_null() {
+                None
+            } else {
+                let val_ptr = ffw_stream_get_metadata_entry_value(ptr);
+                if val_ptr.is_null() {
+                    None
+                } else {
+                    let val = CStr::from_ptr(val_ptr as _);
+                    Some(val.to_str().unwrap())
+                }
+            }
         }
     }
 }
