@@ -282,6 +282,12 @@ impl Packet {
         self
     }
 
+    pub fn duration(&self) -> Timestamp {
+        let dur = unsafe { ffw_packet_get_duration(self.ptr) };
+
+        Timestamp::new(dur, self.time_base)
+    }
+
     /// Check if the key flag is set.
     pub fn is_key(&self) -> bool {
         unsafe { ffw_packet_is_key(self.ptr) != 0 }
