@@ -68,6 +68,10 @@ err:
 
     return NULL;
 }
+ 
+int ffw_codec_parameters_get_media_type(const AVCodecParameters* params) {
+    return params->codec_type;
+}
 
 int ffw_codec_parameters_is_audio_codec(const AVCodecParameters* params) {
     return params->codec_type == AVMEDIA_TYPE_AUDIO;

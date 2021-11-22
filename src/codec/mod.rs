@@ -25,6 +25,7 @@ extern "C" {
     fn ffw_video_codec_parameters_new(codec: *const c_char) -> *mut c_void;
     fn ffw_subtitle_codec_parameters_new(codec: *const c_char) -> *mut c_void;
     fn ffw_codec_parameters_clone(params: *const c_void) -> *mut c_void;
+    fn ffw_codec_parameters_get_media_type(params: *const c_void) -> c_int;
     fn ffw_codec_parameters_is_audio_codec(params: *const c_void) -> c_int;
     fn ffw_codec_parameters_is_video_codec(params: *const c_void) -> c_int;
     fn ffw_codec_parameters_is_subtitle_codec(params: *const c_void) -> c_int;
@@ -192,6 +193,10 @@ impl InnerCodecParameters {
         self.ptr
     }
 
+    fn media_type(&self) -> c_int {
+        unsafe { ffw_codec_parameters_get_media_type(self.ptr) }
+    }
+
     /// Check if these codec parameters are for an audio codec.
     fn is_audio_codec(&self) -> bool {
         unsafe { ffw_codec_parameters_is_audio_codec(self.ptr) != 0 }
@@ -260,6 +265,16 @@ impl Clone for InnerCodecParameters {
 
 unsafe impl Send for InnerCodecParameters {}
 unsafe impl Sync for InnerCodecParameters {}
+
+pub enum MediaType {
+    Unknown = -1,
+    Video,
+    Audio,
+    Data,
+    Subtitle,
+    Attachment,
+    Nb,
+}
 
 /// Variants of codec parameters.
 #[derive(Clone)]
@@ -344,6 +359,26 @@ impl CodecParameters {
         self.inner.as_ref().encoder_name()
     }
 
+    pub fn media_type(&self) -> MediaType {
+        match self.inner.as_ref().media_type() {
+            0 => MediaType::Video,
+            1 => MediaType::Audio,
+            2 => MediaType::Data,
+            3 => MediaType::Subtitle,
+            4 => MediaType::Attachment,
+            5 => MediaType::Nb,
+            _ => MediaType::Unknown,
+        }
+    }
+
+    pub fn as_other_codec_parameters(&self) -> Option<&OtherCodecParameters> {
+        if let CodecParametersVariant::Other(params) = &self.inner {
+            Some(params)
+        } else {
+            None
+        }
+    }
+
     /// Get reference to audio codec parameters (if possible).
     pub fn as_audio_codec_parameters(&self) -> Option<&AudioCodecParameters> {
         if let CodecParametersVariant::Audio(params) = &self.inner {
@@ -365,6 +400,14 @@ impl CodecParameters {
     /// Get reference to subtitle codec parameters (if possible).
     pub fn as_subtitle_codec_parameters(&self) -> Option<&SubtitleCodecParameters> {
         if let CodecParametersVariant::Subtitle(params) = &self.inner {
+            Some(params)
+        } else {
+            None
+        }
+    }
+
+    pub fn into_other_codec_parameters(&self) -> Option<&OtherCodecParameters> {
+        if let CodecParametersVariant::Other(params) = &self.inner {
             Some(params)
         } else {
             None
@@ -838,8 +881,23 @@ impl From<InnerCodecParameters> for SubtitleCodecParameters {
 
 /// Other codec parameters.
 #[derive(Clone)]
-struct OtherCodecParameters {
+pub struct OtherCodecParameters {
     inner: InnerCodecParameters,
+}
+
+impl OtherCodecParameters {
+    pub fn extradata(&self) -> Option<&[u8]> {
+        unsafe {
+            let data = ffw_codec_parameters_get_extradata(self.inner.ptr) as *const u8;
+            let size = ffw_codec_parameters_get_extradata_size(self.inner.ptr) as usize;
+
+            if data.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts(data, size))
+            }
+        }
+    }
 }
 
 impl AsRef<InnerCodecParameters> for OtherCodecParameters {
