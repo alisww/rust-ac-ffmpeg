@@ -440,6 +440,20 @@ impl CodecParameters {
             None
         }
     }
+
+    /// Get extradata.
+    pub fn extradata(&self) -> Option<&[u8]> {
+        unsafe {
+            let data = ffw_codec_parameters_get_extradata(self.inner.as_ref().ptr) as *const u8;
+            let size = ffw_codec_parameters_get_extradata_size(self.inner.as_ref().ptr) as usize;
+
+            if data.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts(data, size))
+            }
+        }
+    }
 }
 
 impl From<AudioCodecParameters> for CodecParameters {
