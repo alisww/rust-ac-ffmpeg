@@ -1,8 +1,10 @@
 //! A/V stream information.
 
 use std::{
+    collections::HashMap,
     ffi::{CStr, CString},
     os::raw::{c_char, c_int, c_void},
+    ptr,
 };
 
 use crate::{
@@ -22,8 +24,14 @@ extern "C" {
         key: *const c_char,
         value: *const c_char,
     ) -> c_int;
-    fn ffw_stream_get_metadata_entry(stream: *const c_void, key: *const c_char) -> *const c_void;
+    fn ffw_stream_get_metadata_entry(
+        stream: *const c_void,
+        key: *const c_char,
+        prev: *const c_void,
+        flags: c_int,
+    ) -> *const c_void;
     fn ffw_stream_get_metadata_entry_value(entry: *const c_void) -> *const c_char;
+    fn ffw_stream_get_metadata_entry_key(entry: *const c_void) -> *const c_char;
 }
 
 /// Stream.
@@ -121,7 +129,7 @@ impl Stream {
     pub fn get_metadata(&self, key: &str) -> Option<&'static str> {
         unsafe {
             let key = CString::new(key).expect("invalid metadata key");
-            let ptr = ffw_stream_get_metadata_entry(self.ptr, key.as_ptr());
+            let ptr = ffw_stream_get_metadata_entry(self.ptr, key.as_ptr(), ptr::null(), 0);
 
             if ptr.is_null() {
                 None
@@ -135,6 +143,30 @@ impl Stream {
                 }
             }
         }
+    }
+
+    pub fn metadata_dict(&self) -> HashMap<&'static str, &'static str> {
+        let mut res = HashMap::new();
+        let nil_str = CString::new("").unwrap();
+        unsafe {
+            let mut prev = ptr::null();
+            loop {
+                prev = ffw_stream_get_metadata_entry(self.ptr, nil_str.as_ptr(), prev, 2); // AV_DICT_IGNORE_SUFFIX
+                if !prev.is_null() {
+                    let key_ptr = ffw_stream_get_metadata_entry_key(prev);
+                    let val_ptr = ffw_stream_get_metadata_entry_value(prev);
+                    if !key_ptr.is_null() && !val_ptr.is_null() {
+                        let key = CStr::from_ptr(key_ptr as _);
+                        let val = CStr::from_ptr(val_ptr as _);
+                        res.insert(key.to_str().unwrap(), val.to_str().unwrap());
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        res
     }
 }
 
