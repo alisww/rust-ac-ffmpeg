@@ -24,6 +24,7 @@ extern "C" {
     fn ffw_frame_get_height(frame: *const c_void) -> c_int;
     fn ffw_frame_get_pts(frame: *const c_void) -> i64;
     fn ffw_frame_set_pts(frame: *mut c_void, pts: i64);
+    fn ffw_frame_get_pkt_duration(frame: *mut c_void) -> i64;
     fn ffw_frame_get_plane_data(frame: *mut c_void, index: usize) -> *mut u8;
     fn ffw_frame_get_line_size(frame: *const c_void, plane: usize) -> usize;
     fn ffw_frame_get_line_count(frame: *const c_void, plane: usize) -> usize;
@@ -379,6 +380,13 @@ impl VideoFrameMut {
         self
     }
 
+    /// Duration of the corresponding AVPacket.
+    pub fn packet_duration(&self) -> Timestamp {
+        let pkt_duration = unsafe { ffw_frame_get_pkt_duration(self.ptr) };
+
+        Timestamp::new(pkt_duration, self.time_base)
+    }
+
     /// Get picture planes.
     pub fn planes(&self) -> Planes {
         Planes::from(self)
@@ -476,6 +484,13 @@ impl VideoFrame {
         unsafe { ffw_frame_set_pts(self.ptr, pts.timestamp()) }
 
         self
+    }
+
+    /// Duration of the corresponding AVPacket.
+    pub fn packet_duration(&self) -> Timestamp {
+        let pkt_duration = unsafe { ffw_frame_get_pkt_duration(self.ptr) };
+
+        Timestamp::new(pkt_duration, self.time_base)
     }
 
     /// Get raw pointer.

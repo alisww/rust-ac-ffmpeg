@@ -158,6 +158,10 @@ void ffw_frame_set_pts(AVFrame* frame, int64_t pts) {
     frame->pts = pts;
 }
 
+int64_t ffw_frame_get_pkt_duration(const AVFrame* frame) {
+    return frame->pkt_duration;
+}
+
 AVFrame* ffw_frame_clone(const AVFrame* frame) {
     return av_frame_clone(frame);
 }
