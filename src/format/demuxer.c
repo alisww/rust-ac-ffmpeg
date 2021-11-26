@@ -100,6 +100,19 @@ int ffw_demuxer_init(Demuxer* demuxer, AVIOContext* avio_context, AVInputFormat*
     return ret;
 }
 
+int ffw_demuxer_init_from_url(Demuxer* demuxer, const char* url, AVInputFormat* format) {
+    int ret;
+
+    ret = avformat_open_input(&demuxer->fc, url, format, &demuxer->options);
+    if (ret < 0) {
+        return ret;
+    }
+
+    av_dict_free(&demuxer->options);
+
+    return ret;
+}
+
 int ffw_demuxer_set_initial_option(Demuxer* demuxer, const char* key, const char* value) {
     return av_dict_set(&demuxer->options, key, value, 0);
 }
