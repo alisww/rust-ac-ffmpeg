@@ -170,8 +170,17 @@ where
 /// An AVIO IO that connects FFmpeg AVIO context with Rust streams.
 #[allow(clippy::upper_case_acronyms)]
 pub struct IO<T> {
-    io_context: IOContext,
+    io_context: Option<IOContext>,
     stream: Box<T>,
+}
+
+impl IO<()> {
+    pub(crate) fn new_empty() -> Self {
+        IO {
+            io_context: None,
+            stream: Box::new(()),
+        }
+    }
 }
 
 impl<T> IO<T> {
@@ -205,12 +214,15 @@ impl<T> IO<T> {
 
         let io_context = unsafe { IOContext::from_raw_ptr(io_context) };
 
-        Self { io_context, stream }
+        Self {
+            io_context: Some(io_context),
+            stream,
+        }
     }
 
     /// Get mutable reference to the underlying IO context.
     pub(crate) fn io_context_mut(&mut self) -> &mut IOContext {
-        &mut self.io_context
+        self.io_context.as_mut().unwrap()
     }
 
     /// Get reference to the underlying stream.

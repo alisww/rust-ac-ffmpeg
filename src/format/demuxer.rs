@@ -31,6 +31,11 @@ extern "C" {
         io_context: *mut c_void,
         format: *mut c_void,
     ) -> c_int;
+    fn ffw_demuxer_init_from_url(
+        demuxer: *mut c_void,
+        url: *const c_char,
+        format: *mut c_void,
+    ) -> c_int;
     fn ffw_demuxer_set_initial_option(
         demuxer: *mut c_void,
         key: *const c_char,
@@ -175,6 +180,34 @@ impl DemuxerBuilder {
         self.ptr = ptr::null_mut();
 
         let res = Demuxer { ptr, io };
+
+        Ok(res)
+    }
+
+    /// Build demuxer from  url
+    pub fn build_from_url(mut self, url: &str) -> Result<Demuxer<()>, Error> {
+        let url = CString::new(url).expect("invalid url string");
+
+        let format_ptr = self
+            .input_format
+            .take()
+            .map(|f| f.ptr)
+            .unwrap_or(ptr::null_mut());
+
+        let ret = unsafe { ffw_demuxer_init_from_url(self.ptr, url.as_ptr(), format_ptr) };
+
+        if ret < 0 {
+            return Err(Error::from_raw_error_code(ret));
+        }
+
+        let ptr = self.ptr;
+
+        self.ptr = ptr::null_mut();
+
+        let res = Demuxer {
+            ptr,
+            io: IO::new_empty(),
+        };
 
         Ok(res)
     }
