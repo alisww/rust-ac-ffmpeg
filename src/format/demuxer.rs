@@ -4,6 +4,7 @@ use std::{
     borrow::{Borrow, BorrowMut},
     convert::TryInto,
     ffi::CString,
+    io::Read,
     ops::{Deref, DerefMut},
     os::raw::{c_char, c_int, c_uint, c_void},
     ptr,
@@ -11,7 +12,7 @@ use std::{
 };
 
 use crate::{
-    format::{stream::Stream},
+    format::{io::IO, stream::Stream},
     packet::Packet,
     time::{TimeBase, Timestamp},
     Error,
@@ -25,7 +26,6 @@ extern "C" {
     ) -> *mut c_void;
 
     fn ffw_demuxer_new() -> *mut c_void;
-    #[allow(dead_code)]
     fn ffw_demuxer_init(
         demuxer: *mut c_void,
         io_context: *mut c_void,
@@ -153,42 +153,39 @@ impl DemuxerBuilder {
         self
     }
 
-    // why is this commented out, you may ask?
-    // well! dropping the IO context will cause it to segfault, but keeping the io context means having to deal with typing. so this is a stop gap solution.
-    // Build the demuxer.
-    //
-    // # Arguments
-    // * `io` - an AVIO reader
-    // pub fn build<T>(mut self, mut io: IO<T>) -> Result<Demuxer, Error>
-    // where
-    //     T: Read,
-    // {
-    //     let io_context_ptr = io.io_context_mut().as_mut_ptr();
+    /// Build the demuxer.
+    ///
+    /// # Arguments
+    /// * `io` - an AVIO reader
+    pub fn build<T>(mut self, mut io: IO<T>) -> Result<Demuxer<T>, Error>
+    where
+        T: Read,
+    {
+        let io_context_ptr = io.io_context_mut().as_mut_ptr();
 
-    //     let format_ptr = self
-    //         .input_format
-    //         .take()
-    //         .map(|f| f.ptr)
-    //         .unwrap_or(ptr::null_mut());
+        let format_ptr = self
+            .input_format
+            .take()
+            .map(|f| f.ptr)
+            .unwrap_or(ptr::null_mut());
 
-    //     let ret = unsafe { ffw_demuxer_init(self.ptr, io_context_ptr, format_ptr) };
+        let ret = unsafe { ffw_demuxer_init(self.ptr, io_context_ptr, format_ptr) };
 
-    //     if ret < 0 {
-    //         return Err(Error::from_raw_error_code(ret));
-    //     }
+        if ret < 0 {
+            return Err(Error::from_raw_error_code(ret));
+        }
 
-    //     let ptr = self.ptr;
+        let ptr = self.ptr;
 
-    //     self.ptr = ptr::null_mut();
+        self.ptr = ptr::null_mut();
 
-    //     let res = Demuxer { ptr };
+        let res = Demuxer { ptr, io };
 
-    //     Ok(res)
-    // }
+        Ok(res)
+    }
 
     /// Build demuxer from  url
-    pub fn build_from_url(mut self, url: &str) -> Result<Demuxer, Error>
-    {
+    pub fn build_from_url(mut self, url: &str) -> Result<Demuxer<()>, Error> {
         let url = CString::new(url).expect("invalid url string");
 
         let format_ptr = self
@@ -207,11 +204,13 @@ impl DemuxerBuilder {
 
         self.ptr = ptr::null_mut();
 
-        let res = Demuxer { ptr };
+        let res = Demuxer {
+            ptr,
+            io: IO::new_empty(),
+        };
 
         Ok(res)
     }
-
 }
 
 impl Drop for DemuxerBuilder {
@@ -224,18 +223,19 @@ unsafe impl Send for DemuxerBuilder {}
 unsafe impl Sync for DemuxerBuilder {}
 
 /// Demuxer.
-pub struct Demuxer {
+pub struct Demuxer<T> {
     ptr: *mut c_void,
+    io: IO<T>,
 }
 
-impl Demuxer {
+impl Demuxer<()> {
     /// Get a demuxer builder.
     pub fn builder() -> DemuxerBuilder {
         DemuxerBuilder::new()
     }
 }
 
-impl Demuxer {
+impl<T> Demuxer<T> {
     /// Set an option.
     pub fn set_option<V>(&mut self, name: &str, value: V) -> Result<(), Error>
     where
@@ -326,7 +326,7 @@ impl Demuxer {
     pub fn find_stream_info(
         self,
         max_analyze_duration: Option<Duration>,
-    ) -> Result<DemuxerWithStreamInfo, (Self, Error)> {
+    ) -> Result<DemuxerWithStreamInfo<T>, (Self, Error)> {
         let max_analyze_duration = max_analyze_duration
             .unwrap_or_else(|| Duration::from_secs(0))
             .as_micros()
@@ -364,68 +364,78 @@ impl Demuxer {
 
         Ok(res)
     }
+
+    /// Get reference to the underlying IO.
+    pub fn io(&self) -> &IO<T> {
+        &self.io
+    }
+
+    /// Get mutable reference to the underlying IO.
+    pub fn io_mut(&mut self) -> &mut IO<T> {
+        &mut self.io
+    }
 }
 
-impl Drop for Demuxer {
+impl<T> Drop for Demuxer<T> {
     fn drop(&mut self) {
         unsafe { ffw_demuxer_free(self.ptr) }
     }
 }
 
-unsafe impl Send for Demuxer {}
-unsafe impl Sync for Demuxer {}
+unsafe impl<T> Send for Demuxer<T> where T: Send {}
+unsafe impl<T> Sync for Demuxer<T> where T: Sync {}
 
 /// Demuxer with information about individual streams.
-pub struct DemuxerWithStreamInfo {
-    inner: Demuxer,
+pub struct DemuxerWithStreamInfo<T> {
+    inner: Demuxer<T>,
     streams: Vec<Stream>,
 }
 
-impl DemuxerWithStreamInfo {
+impl<T> DemuxerWithStreamInfo<T> {
     /// Get streams.
     pub fn streams(&self) -> &[Stream] {
         &self.streams
     }
 
     /// Get the underlying demuxer.
-    pub fn into_demuxer(self) -> Demuxer {
+    pub fn into_demuxer(self) -> Demuxer<T> {
         self.inner
     }
 }
 
-impl AsRef<Demuxer> for DemuxerWithStreamInfo {
-    fn as_ref(&self) -> &Demuxer {
+impl<T> AsRef<Demuxer<T>> for DemuxerWithStreamInfo<T> {
+    fn as_ref(&self) -> &Demuxer<T> {
         &self.inner
     }
 }
 
-impl AsMut<Demuxer> for DemuxerWithStreamInfo {
-    fn as_mut(&mut self) -> &mut Demuxer {
+impl<T> AsMut<Demuxer<T>> for DemuxerWithStreamInfo<T> {
+    fn as_mut(&mut self) -> &mut Demuxer<T> {
         &mut self.inner
     }
 }
 
-impl Borrow<Demuxer> for DemuxerWithStreamInfo {
-    fn borrow(&self) -> &Demuxer {
+impl<T> Borrow<Demuxer<T>> for DemuxerWithStreamInfo<T> {
+    fn borrow(&self) -> &Demuxer<T> {
         &self.inner
     }
 }
 
-impl BorrowMut<Demuxer> for DemuxerWithStreamInfo {
-    fn borrow_mut(&mut self) -> &mut Demuxer {
+impl<T> BorrowMut<Demuxer<T>> for DemuxerWithStreamInfo<T> {
+    fn borrow_mut(&mut self) -> &mut Demuxer<T> {
         &mut self.inner
     }
 }
 
-impl Deref for DemuxerWithStreamInfo {
-    type Target = Demuxer;
+impl<T> Deref for DemuxerWithStreamInfo<T> {
+    type Target = Demuxer<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl DerefMut for DemuxerWithStreamInfo {
+impl<T> DerefMut for DemuxerWithStreamInfo<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
