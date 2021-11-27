@@ -113,7 +113,6 @@ int ffw_demuxer_init_from_url(Demuxer* demuxer, const char* url, AVInputFormat* 
     return ret;
 }
 
-
 int ffw_demuxer_set_initial_option(Demuxer* demuxer, const char* key, const char* value) {
     return av_dict_set(&demuxer->options, key, value, 0);
 }
