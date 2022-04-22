@@ -106,6 +106,13 @@ impl PacketMut {
         self
     }
 
+    /// Set packet presentation timestamp without time base.
+    pub fn with_raw_pts(self, pts: i64) -> Self {
+        unsafe { ffw_packet_set_pts(self.ptr, pts) }
+
+        self
+    }
+
     /// Get packet decoding timestamp.
     pub fn dts(&self) -> Timestamp {
         let dts = unsafe { ffw_packet_get_dts(self.ptr) };
@@ -126,6 +133,11 @@ impl PacketMut {
         let dur = unsafe { ffw_packet_get_duration(self.ptr) };
 
         Timestamp::new(dur, self.time_base)
+    /// Set packet decoding timestamp without time base.
+    pub fn with_raw_dts(self, dts: i64) -> Self {
+        unsafe { ffw_packet_set_dts(self.ptr, dts) }
+
+        self
     }
 
     /// Check if the key flag is set.
@@ -266,6 +278,13 @@ impl Packet {
         self
     }
 
+    /// Set packet presentation timestamp without time base.
+    pub fn with_raw_pts(self, pts: i64) -> Self {
+        unsafe { ffw_packet_set_pts(self.ptr, pts) }
+
+        self
+    }
+
     /// Get packet decoding timestamp.
     pub fn dts(&self) -> Timestamp {
         let dts = unsafe { ffw_packet_get_dts(self.ptr) };
@@ -286,6 +305,13 @@ impl Packet {
         let dur = unsafe { ffw_packet_get_duration(self.ptr) };
 
         Timestamp::new(dur, self.time_base)
+    }
+    
+    /// Set packet decoding timestamp without time base.
+    pub fn with_raw_dts(self, dts: i64) -> Self {
+        unsafe { ffw_packet_set_dts(self.ptr, dts) }
+
+        self
     }
 
     /// Check if the key flag is set.
