@@ -105,16 +105,3 @@ void ffw_frame_scaler_free(FrameScaler* scaler) {
     sws_freeContext(scaler->scale_context);
     free(scaler);
 }
-
-#define ALG_ID_FAST_BILINEAR 0
-#define ALG_ID_BILINEAR      1
-#define ALG_ID_BICUBIC       2
-
-int ffw_alg_id_to_flags(size_t id) {
-    switch (id) {
-        case ALG_ID_FAST_BILINEAR: return SWS_FAST_BILINEAR;
-        case ALG_ID_BILINEAR:      return SWS_BILINEAR;
-        case ALG_ID_BICUBIC:       return SWS_BICUBIC;
-        default: return 0;
-    }
-}

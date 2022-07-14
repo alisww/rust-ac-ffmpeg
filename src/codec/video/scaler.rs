@@ -7,10 +7,6 @@ use crate::{
     Error,
 };
 
-const ALG_ID_FAST_BILINEAR: usize = 0;
-const ALG_ID_BILINEAR: usize = 1;
-const ALG_ID_BICUBIC: usize = 2;
-
 extern "C" {
     fn ffw_frame_scaler_new(
         sformat: c_int,
@@ -25,27 +21,23 @@ extern "C" {
     fn ffw_frame_scaler_scale(scaler: *mut c_void, src: *const c_void) -> *mut c_void;
 
     fn ffw_frame_scaler_free(scaler: *mut c_void);
-
-    fn ffw_alg_id_to_flags(id: usize) -> c_int;
 }
 
 /// Scaling algorithm.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[repr(C)]
 pub enum Algorithm {
-    FastBilinear,
-    Bilinear,
-    Bicubic,
-}
-
-impl Algorithm {
-    /// Get algorithm ID.
-    fn id(self) -> usize {
-        match self {
-            Algorithm::FastBilinear => ALG_ID_FAST_BILINEAR,
-            Algorithm::Bilinear => ALG_ID_BILINEAR,
-            Algorithm::Bicubic => ALG_ID_BICUBIC,
-        }
-    }
+    FastBilinear = 1,
+    Bilinear = 2,
+    Bicubic = 4,
+    Experimental = 8,
+    Point = 0x10,
+    Area = 0x20,
+    BicubicLinear = 0x40,
+    Gauss = 0x80,
+    Sinc = 0x100,
+    Lanczos = 0x200,
+    Spline = 0x400
 }
 
 /// Builder for a video frame scaler.
@@ -66,7 +58,7 @@ impl VideoFrameScalerBuilder {
     fn new() -> Self {
         let default_algorithm = Algorithm::Bicubic;
 
-        let flags = unsafe { ffw_alg_id_to_flags(default_algorithm.id()) };
+        let flags = default_algorithm as c_int;
 
         Self {
             sformat: -1,
@@ -119,7 +111,7 @@ impl VideoFrameScalerBuilder {
 
     /// Set scaling algorithm. The default is bicubic.
     pub fn algorithm(mut self, algorithm: Algorithm) -> Self {
-        self.flags = unsafe { ffw_alg_id_to_flags(algorithm.id()) };
+        self.flags = algorithm as c_int;
 
         self
     }
