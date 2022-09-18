@@ -3,7 +3,7 @@
 use std::{
     borrow::{Borrow, BorrowMut},
     convert::TryInto,
-    ffi::CString,
+    ffi::{CStr, CString},
     io::Read,
     ops::{Deref, DerefMut},
     os::raw::{c_char, c_int, c_uint, c_void},
@@ -62,6 +62,7 @@ extern "C" {
         seek_target: c_int,
     ) -> c_int;
     fn ffw_demuxer_free(demuxer: *mut c_void);
+    fn ffw_demuxer_get_format_names(demuxer: *mut c_void) -> *const c_char;
 }
 
 /// Seek type/mode.
@@ -363,6 +364,20 @@ impl<T> Demuxer<T> {
         };
 
         Ok(res)
+    }
+
+    /// Gets names (comma-separated) for the format we're demuxing
+    pub fn get_format_names(&self) -> Option<&'static str> {
+        unsafe {
+            let ptr = ffw_demuxer_get_format_names(self.ptr);
+
+            if ptr.is_null() {
+                None
+            } else {
+                let val = CStr::from_ptr(ptr as _);
+                Some(val.to_str().unwrap())
+            }
+        }
     }
 
     /// Get reference to the underlying IO.

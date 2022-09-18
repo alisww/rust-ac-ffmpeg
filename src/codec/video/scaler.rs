@@ -37,7 +37,7 @@ pub enum Algorithm {
     Gauss = 0x80,
     Sinc = 0x100,
     Lanczos = 0x200,
-    Spline = 0x400
+    Spline = 0x400,
 }
 
 /// Builder for a video frame scaler.

@@ -222,3 +222,7 @@ void ffw_demuxer_free(Demuxer* demuxer) {
 
     free(demuxer);
 }
+
+const char* ffw_demuxer_get_format_names(Demuxer* demuxer) {
+    return demuxer->fc->iformat->name;
+}

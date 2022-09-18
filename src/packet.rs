@@ -134,7 +134,7 @@ impl PacketMut {
 
         Timestamp::new(dur, self.time_base)
     }
-    
+
     /// Set packet decoding timestamp without time base.
     pub fn with_raw_dts(self, dts: i64) -> Self {
         unsafe { ffw_packet_set_dts(self.ptr, dts) }
@@ -308,7 +308,7 @@ impl Packet {
 
         Timestamp::new(dur, self.time_base)
     }
-    
+
     /// Set packet decoding timestamp without time base.
     pub fn with_raw_dts(self, dts: i64) -> Self {
         unsafe { ffw_packet_set_dts(self.ptr, dts) }
