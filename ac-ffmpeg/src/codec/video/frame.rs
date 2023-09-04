@@ -551,6 +551,19 @@ impl VideoFrame {
         self
     }
 
+    pub fn duration(&self) -> Option<Duration> {
+        let duration = unsafe { ffw_frame_get_duration(self.ptr) };
+
+        if duration > 0 {
+            let z = Timestamp::new(0, self.time_base);
+            let d = Timestamp::new(duration, self.time_base);
+
+            Some(d - z)
+        } else {
+            None
+        }
+    }
+
     /// Get picture type
     pub fn picture_type(&self) -> PictureType {
         unsafe { PictureType::from_raw(ffw_frame_get_picture_type(self.ptr)) }
