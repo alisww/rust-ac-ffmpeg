@@ -28,7 +28,7 @@ extern "C" {
         key: *const c_char,
         value: *const c_char,
     ) -> c_int;
-    
+
     fn ffw_stream_get_metadata_entry(
         stream: *const c_void,
         key: *const c_char,
@@ -195,7 +195,7 @@ impl Stream {
 
         res
     }
-    
+
     /// Set stream id.
     pub fn set_stream_id(&mut self, id: i32) {
         unsafe { ffw_stream_set_id(self.ptr, id as c_int) };

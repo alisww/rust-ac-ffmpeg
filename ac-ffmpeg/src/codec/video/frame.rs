@@ -9,6 +9,7 @@ use std::{
     ptr,
     slice::{self, Chunks, ChunksMut},
     str::FromStr,
+    time::Duration,
 };
 
 use crate::time::{TimeBase, Timestamp};
@@ -25,6 +26,8 @@ extern "C" {
     fn ffw_frame_get_best_effort_timestamp(frame: *const c_void) -> i64;
     fn ffw_frame_get_pts(frame: *const c_void) -> i64;
     fn ffw_frame_set_pts(frame: *mut c_void, pts: i64);
+    fn ffw_frame_get_duration(frame: *const c_void) -> i64;
+    fn ffw_frame_set_duration(frame: *mut c_void, duration: i64);
     fn ffw_frame_get_plane_data(frame: *mut c_void, index: usize) -> *mut u8;
     fn ffw_frame_get_line_size(frame: *const c_void, plane: usize) -> usize;
     fn ffw_frame_get_line_count(frame: *const c_void, plane: usize) -> usize;
@@ -416,6 +419,19 @@ impl VideoFrameMut {
         unsafe { ffw_frame_set_pts(self.ptr, pts.timestamp()) }
 
         self
+    }
+
+    pub fn duration(&self) -> Option<Duration> {
+        let duration = unsafe { ffw_frame_get_duration(self.ptr) };
+
+        if duration > 0 {
+            let z = Timestamp::new(0, self.time_base);
+            let d = Timestamp::new(duration, self.time_base);
+
+            Some(d - z)
+        } else {
+            None
+        }
     }
 
     /// Get picture type
