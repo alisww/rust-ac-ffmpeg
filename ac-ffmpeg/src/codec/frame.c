@@ -280,8 +280,9 @@ void ffw_frame_set_pts(AVFrame* frame, int64_t pts) {
 }
 
 int64_t ffw_frame_get_duration(const AVFrame* frame) {
-    return frame->duration;
+    return frame->pkt_duration;
 }
+
 
 void ffw_frame_set_duration(AVFrame* frame, int64_t duration) {
     frame->duration = duration;
