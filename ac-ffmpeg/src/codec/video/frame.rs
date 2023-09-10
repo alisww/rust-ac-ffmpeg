@@ -564,6 +564,10 @@ impl VideoFrame {
         }
     }
 
+    pub fn raw_duration(&self) -> i64 {
+        unsafe { ffw_frame_get_duration(self.ptr) }
+    }
+
     /// Get picture type
     pub fn picture_type(&self) -> PictureType {
         unsafe { PictureType::from_raw(ffw_frame_get_picture_type(self.ptr)) }
