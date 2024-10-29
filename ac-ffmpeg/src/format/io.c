@@ -2,7 +2,7 @@
 #include <libavutil/mem.h>
 
 typedef int read_packet_t(void*, uint8_t*, int);
-typedef int write_packet_t(void*, uint8_t*, int);
+typedef int write_packet_t(void*, const uint8_t*, int);
 typedef int64_t seek_t(void*, int64_t, int);
 
 int ffw_io_is_avseek_size(int whence) {
